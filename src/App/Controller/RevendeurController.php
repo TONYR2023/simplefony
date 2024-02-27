@@ -15,6 +15,8 @@ class RevendeurController extends AbstractController
 
     #[Endpoint('/reseller/show', name:'show_reseller', requestMethod: 'GET' )]
     public function show(){
+
+        
         $this->send([
             "message" => "endpoint pour la lecture"
         ]);

@@ -6,6 +6,7 @@ use Mvc\Framework\Kernel\AbstractController;
 use Mvc\Framework\Kernel\Attributes\Endpoint;
 use Mvc\Framework\App\Entity\Utilisateur;
 use Mvc\Framework\App\Repository\UtilisateurRepository;
+use Mvc\Framework\Kernel\AbstractRepository;
 use Mvc\Framework\Kernel\JwtManager;
 use Mvc\Framework\Kernel\Utils\Request;
 use Mvc\Framework\Kernel\Utils\Serializer;
@@ -40,26 +41,65 @@ class AuthenticationController extends AbstractController
         );
     }
 
+
+
     #[Endpoint(
         path :'/authentication/show/myaccount',
         name:'show_account', 
         requestMethod: 'GET' 
         )]
-    public function show(){
+    public function show(UtilisateurRepository $utilisateurRepository){
+        $allUser = $utilisateurRepository->findAll();
+       
         $this->send([
-            "message" => "endpoint pour la lecture"
+            ["Tous les utilisateurs" => $allUser]
         ]);
     }
+
+     #[Endpoint(
+        path :'/authentication/show/user/myaccount',
+        name:'show_account', 
+        requestMethod: 'GET' 
+        )]
+    public function showUser(Request $request, UtilisateurRepository $utilisateurRepository)
+    {
+        $user = $request->retrieveGetValue('id');
+        
+        if($oneUser = $utilisateurRepository->find($user)){
+            $this->send([
+           ["Utilisateur" => "Vous avez selectionn\é l'utisateur : ".$user],["utilisteur est" => $oneUser ]]);
+        } else {
+          $this->send([
+           "Utilisateur" => "Utisateur est introuvable "]); 
+        }
+    }
+
+
+
 
     #[Endpoint(
         path:'/authentication/delete/myaccount', 
         name:'delete_account', 
-        requestMethod: 'GET' 
+        requestMethod: 'DELETE' 
         )]
-    public function delete(){
-        $this->send([
-            "message" => "endpoint pour la supprimer"
-        ]);
+    public function delete(Request $request,UtilisateurRepository $utilisateurRepository){
+        $userId = $request->retrievePostValue('id');
+    
+        if($utilisateurRepository->find($userId))
+        {
+            $deleteUser = $utilisateurRepository->delete($userId);
+            $this->send([
+             "message" => "vous avez supprim\é l\'utilisateur: " . $userId ,
+             "success" => $deleteUser
+             ]);
+        } else 
+        {
+           $this->send([ 
+            "message : " => "il y a une erreur",
+            "error" => "vous n'avez pas supprim\é l\'utilisateur:" . $userId 
+            ]); 
+        }
+    
     }
     
     #[Endpoint(
@@ -67,10 +107,24 @@ class AuthenticationController extends AbstractController
         name:'update_account', 
         requestMethod: 'PATCH' 
         )]
-    public function update(){
+    public function update(Request $request, UtilisateurRepository $utilisateurRepository){
+        $userId = $request->retrievePostValue('id');
+        $userUpdate = $request->retrieveAllPostValues();
+        $mdp = $userUpdate['mdp'];
+         
+        if ($mdp) { 
+        $userUpdate['mdp'] = password_hash($mdp, PASSWORD_BCRYPT);
+        $utilisateurRepository->update($userId, $userUpdate);
+        
         $this->send([
-            "message" => "endpoint pour la modification"
+            'message' => "Le mot de passe a été modifié avec succès."
         ]);
+    } else {
+        // Si le mot de passe ne correspond pas au critère, envoyer une réponse d'erreur
+        $this->send([
+            "message" => "Le mot de passe fourni ne correspond pas au critère de sécurité requis."
+        ]);
+    }
     }
 
     #[Endpoint(path:'/authentication/login',
